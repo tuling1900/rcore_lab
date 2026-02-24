@@ -38,6 +38,9 @@ struct proc {
 	/*
 	* LAB1: you may need to add some new fields here
 	*/
+	int has_run;
+	uint64 start_time;
+	unsigned int syscall_times[MAX_SYSCALL_NUM];
 };
 
 /*
