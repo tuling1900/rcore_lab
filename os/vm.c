@@ -49,7 +49,7 @@ void kvm_init(void)
 pte_t *walk(pagetable_t pagetable, uint64 va, int alloc)
 {
 	if (va >= MAXVA)
-		panic("walk");
+		panic("Invalid address");
 
 	for (int level = 2; level > 0; level--) {
 		pte_t *pte = &pagetable[PX(level, va)];
@@ -111,22 +111,22 @@ void kvmmap(pagetable_t kpgtbl, uint64 va, uint64 pa, uint64 sz, int perm)
 // allocate a needed page-table page.
 int mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
 {
-	uint64 a, last;
+	uint64 start, last;
 	pte_t *pte;
 
-	a = PGROUNDDOWN(va);
+	start = PGROUNDDOWN(va);
 	last = PGROUNDDOWN(va + size - 1);
 	for (;;) {
-		if ((pte = walk(pagetable, a, 1)) == 0)
+		if ((pte = walk(pagetable, start, 1)) == 0)
 			return -1;
 		if (*pte & PTE_V) {
 			errorf("remap");
 			return -1;
 		}
 		*pte = PA2PTE(pa) | perm | PTE_V;
-		if (a == last)
+		if (start == last)
 			break;
-		a += PGSIZE;
+		start += PGSIZE;
 		pa += PGSIZE;
 	}
 	return 0;
