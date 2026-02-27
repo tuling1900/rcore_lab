@@ -35,18 +35,16 @@ uint64 sys_sched_yield()
 	return 0;
 }
 
-uint64 sys_gettimeofday(TimeVal *val, int _tz) // TODO: implement sys_gettimeofday in pagetable. (VA to PA)
+uint64 sys_gettimeofday(TimeVal *val, int _tz) 
 {
-	// YOUR CODE
-	val->sec = 0;
-	val->usec = 0;
-
-	/* The code in `ch3` will leads to memory bugs*/
-
-	// uint64 cycle = get_cycle();
-	// val->sec = cycle / CPU_FREQ;
-	// val->usec = (cycle % CPU_FREQ) * 1000000 / CPU_FREQ;
-	return 0;
+	TimeVal kval;
+	uint64 cycle = get_cycle();
+	kval.sec = cycle / CPU_FREQ;
+	kval.usec = (cycle % CPU_FREQ) * 1000000 / CPU_FREQ;
+	pagetable_t pagetable = curr_proc()->pagetable;
+    if (copyout(pagetable, (uint64)val, (char *)&kval, sizeof(kval)) == 0)
+		return 0;
+	return -1;
 }
 
 uint64 sys_sbrk(int n)
@@ -117,9 +115,6 @@ void syscall()
 	case SYS_sbrk:
 		ret = sys_sbrk(args[0]);
 		break;
-	/*
-	* LAB1: you may need to add SYS_taskinfo case here
-	*/
 	default:
 		ret = -1;
 		errorf("unknown syscall %d", id);
