@@ -37,12 +37,12 @@ uint64 sys_sched_yield()
 
 uint64 sys_gettimeofday(TimeVal *val, int _tz) 
 {
+	struct proc *p = curr_proc();
 	TimeVal kval;
 	uint64 cycle = get_cycle();
 	kval.sec = cycle / CPU_FREQ;
 	kval.usec = (cycle % CPU_FREQ) * 1000000 / CPU_FREQ;
-	pagetable_t pagetable = curr_proc()->pagetable;
-    if (copyout(pagetable, (uint64)val, (char *)&kval, sizeof(kval)) == 0)
+    if (copyout(p->pagetable, (uint64)val, (char *)&kval, sizeof(kval)) == 0)
 		return 0;
 	return -1;
 }
@@ -62,9 +62,7 @@ uint64 sys_sbrk(int n)
 // TODO: add support for mmap and munmap syscall.
 // hint: read through docstrings in vm.c. Watching CH4 video may also help.
 // Note the return value and PTE flags (especially U,X,W,R)
-/*
-* LAB1: you may need to define sys_task_info here
-*/
+
 uint64 sys_task_info(struct TaskInfo *ti)
 {
 	struct proc *p = curr_proc();
@@ -75,7 +73,7 @@ uint64 sys_task_info(struct TaskInfo *ti)
 	kti.time = (delta * 1000) / CPU_FREQ;
 	memmove(kti.syscall_times, p->syscall_times, 
 		sizeof(kti.syscall_times));
-	if (copy_to_user(ti, &kti, sizeof(kti)) != 0)
+	if (copyout(p->pagetable, (uint64)ti, (char *)&kti, sizeof(kti)) != 0)
 		return -1;
 	return 0;
 }
