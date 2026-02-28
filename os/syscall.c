@@ -98,6 +98,22 @@ uint64 mmap(void* start, unsigned long long len, int port, int flag, int fd)
 	return 0;
 }
 
+uint64 munmap(void* start, unsigned long long len)
+{
+	if (len == 0)
+		return 0;
+
+	if (len > (1ULL << 30)) {
+    	errorf("len out of range");
+    	return -1;
+	}
+	
+	uint64 npages = PGROUNDUP(len) / PGSIZE;
+    struct proc *p = curr_proc();
+	uvmunmap(p->pagetable, (uint64)start, npages, 1);
+    return 0;
+}
+
 uint64 sys_task_info(struct TaskInfo *ti)
 {
 	struct proc *p = curr_proc();
