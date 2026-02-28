@@ -42,19 +42,19 @@ uint64 sys_gettimeofday(TimeVal *val, int _tz)
 	uint64 cycle = get_cycle();
 	kval.sec = cycle / CPU_FREQ;
 	kval.usec = (cycle % CPU_FREQ) * 1000000 / CPU_FREQ;
-    if (copyout(p->pagetable, (uint64)val, (char *)&kval, sizeof(kval)) == 0)
-		return 0;
-	return -1;
+    if (copyout(p->pagetable, (uint64)val, (char *)&kval, sizeof(kval)) != 0)
+		return -1;
+	return 0;
 }
 
 uint64 sys_sbrk(int n)
 {
 	uint64 addr;
-        struct proc *p = curr_proc();
-        addr = p->program_brk;
-        if(growproc(n) < 0)
-                return -1;
-        return addr;	
+    struct proc *p = curr_proc();
+    addr = p->program_brk;
+    if(growproc(n) < 0)
+        return -1;
+    return addr;	
 }
 
 
@@ -62,6 +62,41 @@ uint64 sys_sbrk(int n)
 // TODO: add support for mmap and munmap syscall.
 // hint: read through docstrings in vm.c. Watching CH4 video may also help.
 // Note the return value and PTE flags (especially U,X,W,R)
+uint64 mmap(void* start, unsigned long long len, int port, int flag, int fd)
+{
+	if ((port & ~0x7) != 0 || (port & 0x7) == 0) {
+		errorf("port error");
+		return -1;
+	}
+
+	if (len == 0)
+		return 0;
+
+	if (!PGALIGNED((uint64)start)) {
+    	errorf("start not page aligned");
+    	return -1;
+	}
+
+	if (len > (1ULL << 30)) {
+    	errorf("len out of range");
+    	return -1;
+	}
+	uint64 addr;
+	pagetable_t pgt = curr_proc()->pagetable;
+	int perm = port | 0x8;
+	uint64 end = start + PGROUNDUP(len);
+	for (addr = start; addr < end; addr += PGSIZE) {
+		uint64 pa = kalloc();
+		if (pa == 0) {
+			errorf("No free memory available");
+			return -1;
+		}
+		if (mappages(pgt, addr, PGSIZE, pa, perm) != 0)
+			return -1;
+	}
+
+	return 0;
+}
 
 uint64 sys_task_info(struct TaskInfo *ti)
 {
